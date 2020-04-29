@@ -1,0 +1,23 @@
+- name: Install apache packages 
+  yum:
+    name: httpd
+    state: present
+
+- name: ensure httpd is running
+  service:
+    name: httpd 
+    state: started
+
+- name: Open port 80 for http access
+  firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+  with_items: 
+      - http
+      - https
+ 
+- name: Restart the firewalld service to load in the firewall changes
+  service: 
+    name: firewalld 
+    state: restarted

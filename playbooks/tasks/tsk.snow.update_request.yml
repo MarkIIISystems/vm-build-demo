@@ -1,0 +1,31 @@
+---
+#requires pysnow
+##
+  - include_tasks: ./tsk.snow.get_request.yml
+    vars:
+      snow_number: "{{ snow_number_task }}"
+    register: get_req
+  
+  - name: Debug get_req
+    debug:
+      msg: "{{ get_req.record.stage }}"
+ 
+  - name: include vars
+    include_vars: "/terraform_demo/vars/snow_vars.yml"
+
+  - name: Update record
+    snow_record:
+      table: sc_request
+      state: present
+      username: "{{ snow_user }}"
+      password: "{{ snow_pass }}"
+      instance: "{{ snow_instance }}"
+      number: "{{ snow_number_task }}"
+      data: 
+        comments: "{{ snow_comment }}"
+        stage: "{{ snow_stage | default(get_req.record.stage) }}"
+    register: update_req
+  
+  - name: Lets see it
+    debug: 
+      msg: "{{ update_req }}"

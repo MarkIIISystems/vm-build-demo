@@ -1,0 +1,25 @@
+---
+- name: DSC Configure host
+  hosts:  all
+  tasks:
+  
+    - name: Load ethernet connection name
+      set_fact:
+        ether_name: "{{ ansible_interfaces[0]['connection_name'] }}"
+    
+    - name: debug conents
+      debug:
+        var: ether_name
+
+    - name: Verify the DnsConnectionSuffix is avaiable
+      win_psmodule:
+        name: NetworkingDsc
+
+    - name: Configure DNS Suffix with proper domain name
+      win_dsc:
+        resource_name: DnsConnectionSuffix
+        Ensure: present
+        InterfaceAlias: "{{ ether_name }}"
+        ConnectionSpecificSuffix: "{{ zone_name }}"
+        UseSuffixWhenRegistering: yes
+      register: ether_change

@@ -1,0 +1,8 @@
+---
+- name: Launch a job with inventory and credential
+  command: tower-cli inventory_source update 10 --wait
+
+- name: Launch a job with inventory and credential
+  command: tower-cli inventory_source update 48 --wait
+
+  

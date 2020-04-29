@@ -1,0 +1,25 @@
+---
+- name: Run tower Create CentOS job from localhost
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  tasks:
+  
+  - name: Launch a job with inventory and credential
+    tower_job_launch:
+      job_template: "Create Virtual Machine"
+      inventory: "Systems Ansible Inventory"
+      validate_certs: no
+      extra_vars:
+      - "machine_name={{ machine_name }}"
+      - "vm_owner=\"{{ vm_owner }}\""
+      - "vm_request_id={{ vm_request_id }}"
+      - "base_os={{ base_os }}"
+      - "vm_size={{ vm_size }}"
+      - "vm_apps={{ vm_apps }}"
+    register: job
+  
+  - name: Wait for job max 500s
+    tower_job_wait:
+      job_id: "{{ job.id }}"
+      timeout: 500

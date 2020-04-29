@@ -1,0 +1,12 @@
+---
+
+  - name: Install the linux agent RPM
+    yum:
+      name: "{{ base_url }}/{{ lininstaller }}"
+      state: present
+
+  - name: Enable Redhat LI Agent
+    service:
+      name: liagentd.service
+      state: started
+      enabled: yes

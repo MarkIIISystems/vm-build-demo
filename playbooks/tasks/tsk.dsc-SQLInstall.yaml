@@ -1,0 +1,53 @@
+---
+
+  - name: Powershell | Install Required Powershell Modules
+    win_psmodule: name={{ item }} state=present
+    with_items:
+      - SQLServerDsc
+      - StorageDsc
+      - ServerManager
+      - dbatools
+      - xNetworking
+  
+  - name: Win Get the SQL Medi
+    win_get_url:
+      url: "http://10.3.50.48/SQLConfigurations.zip"
+      dest: "c:\\setup\\SQLConfigurations.zip"
+  
+  - name: Recursively decompress the SQL Install Media
+    win_unzip:
+      src: "C:\\setup\\SQLConfigurations.zip"
+      dest: "C:\\setup\\"
+      delete_archive: yes
+
+  - name: Install SQL Server
+    win_dsc:
+      resource_name: SQLSetup
+      Action: Install
+      UpdateEnabled: False
+      SourcePath: "c:\\setup\\SQLConfigurations\\"
+      InstanceName: "MSSQLSERVER"
+      InstallSharedDir: "C:\\Program Files\\Microsoft SQL Server"
+      InstallSharedwowDir: "C:\\Program Files (x86)\\Microsoft SQL Server"
+      InstanceDir: "C:\\Program Files\\Microsoft SQL Server"
+      SQLUserDBDir: "G:\\MSSQL\\Data"
+      SQLUserDBLogDir: "L:\\MSSQL\\Logs" 
+      SQLTempDBDir: "T:\\MSSQL\\TempDB"
+      SQLTempDBLogDir: "L:\\MSSQL\\TempLog"
+      Features: "SQLENGINE,FULLTEXT"
+      SQLCollation: "SQL_Latin1_General_CP1_CI_AS"
+      BrowserSvcStartupType: "Automatic"
+      SQLBackupDir: "G:\\MSSQL\\Backup"
+      AgtSvcStartupType: "Automatic"
+      SQLSysAdminAccounts: "BUILTIN\\Administrators" 
+      PsDscRunAsCredential_username: '{{ ansible_user }}'
+      PsDscRunAsCredential_password: '{{ ansible_password }}'
+    no_log: false
+
+#- name: Configure the MSSQLSERVERAGENT Service
+#  win_service:
+#    name: sqlserveragent
+#    state: started
+#    username: "{{ mssql_agentsvc_account }}"
+#    password: "{{ mssql_agentsvc_account_pass }}"
+

@@ -1,0 +1,24 @@
+vsphere_server="VCENTER"
+vsphere_user="VCENTERUSER"
+vsphere_password="VCENTERPASSWORD"
+admin_password="OSADMINPASSWORD"
+vsphere_datacenter="VSPHEREDATACENTER"
+vsphere_storage="DATASTORECLUSTER"
+vsphere_cluster="CLUSTER"
+vm_portgroup="PORTGROUP"
+resource_pool="RESOURCEPOOL"
+vm_folder="VMFOLDER"
+vm_domain="YOURDOMAIN"
+vm_mem_size = {
+  "small" = 4096
+  "medium" = 8192
+  "large" = 12288
+}
+
+vm_cpu_size = {
+  "small" = 2
+  "medium" = 2
+  "large" = 4
+}
+
+

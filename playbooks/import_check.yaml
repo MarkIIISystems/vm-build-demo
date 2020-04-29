@@ -1,0 +1,55 @@
+---
+- name: Import for checking tasks
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - vars/li-agent-vars.yaml
+  vars:
+    ssl_keys:
+      - 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\SSL 3.0\Server'
+      - 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\SSL 2.0\Server'
+
+  tasks:
+    
+    - name: Linux block
+      block: 
+  
+        - name: Install LI Agent
+          import_tasks: tasks/tsk.lin-install-liagent.yaml
+          tags:
+            - always
+        
+        - name: Check httpd task
+          import_tasks: tasks/tsk.httpd.yaml
+          tags:
+            - httpd
+          
+      when: ansible_os_family == "RedHat"
+
+
+    - name: Windows Block
+      block:
+        - name: Install LI Agent
+          import_tasks: tasks/tsk.win-install-liagent.yaml
+          tags:
+          ignore_errors: yes
+          tags:
+            - always
+      
+        - name: Install IIS Feature
+          import_tasks: tasks/tsk.dsc-IIS.yaml
+          tags:
+            - install_iis
+
+        - name: Install IIS Feature
+          import_tasks: tasks/tsk.win-disable-ssl.yaml
+          tags:
+            - disable_ssl
+
+        - name: Run Windows Updates 
+          include: tasks/tsk.win-updates-gen.yaml
+          ignore_errors: yes
+          tags:
+            - update_all
+
+      when: ansible_os_family == "Windows"

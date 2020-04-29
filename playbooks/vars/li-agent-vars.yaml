@@ -1,0 +1,6 @@
+---
+
+base_url: http://10.3.50.48/
+wininstaller: VMware-Log-Insight-Agent-8.0.0-14743436_10.3.98.66.msi
+winproduct_id:  {69CFC17D-9E9D-4262-AFA1-BCB517D14D18}
+lininstaller: VMware-Log-Insight-Agent-8.0.0-14743436.noarch_10.3.98.66.rpm

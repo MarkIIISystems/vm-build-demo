@@ -1,0 +1,7 @@
+
+
+  - name: Install the windows agent MSI
+    win_package:
+      path: "{{ base_url }}/{{ wininstaller }}"
+      product_id: "{{ winproduct_id }}"
+      state: present

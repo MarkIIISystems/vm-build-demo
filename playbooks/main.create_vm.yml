@@ -1,0 +1,205 @@
+- name: Create a VM from a template
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    /terraform_demo/vars/terraform_vars.yml
+  vars:
+    basepath: "/terraform_demo/terraform_m3"
+    debug_off: true
+    prod_key: ""
+
+
+## 
+# Pre-Tasks
+#
+  pre_tasks:
+
+  - name: Update SNOW record
+    include_tasks: ./tsk.snow.update_request.yml
+    vars:
+      snow_number_task: "{{ vm_request_id }}"
+      snow_comment: "Provisioning of {{ machine_name }} has started by opef!"
+      snow_stage: "delivery"
+
+##
+# Tasks
+#
+
+  tasks:
+
+  - name: Set product key for windows16
+    set_fact:
+      prod_key: "{{ product_key_win16 }}"
+    when: base_os is match("windows16.*")
+
+  - name: Set product key for windows19
+    set_fact:
+      prod_key: "{{ product_key_win19 }}"
+    when: base_os is match("windows19.*")
+
+  - name: create directory
+    file:
+      path: "{{ basepath }}/{{ machine_name }}"
+      state: directory
+      mode: '0755'
+ 
+  - name: write the file
+    template:
+      src: "{{ basepath }}/base_{{ base_os }}/base_{{ base_os }}.tf"
+      dest:  "{{ basepath }}/{{ machine_name }}/{{ machine_name }}.tf"
+ 
+  - name: make sure file is there
+    stat:
+      path: "{{ basepath }}/{{ machine_name }}/{{ machine_name }}.tf"
+    register: stat_result
+ 
+  - name: terraform the stuff
+    terraform:
+     project_path: "{{ basepath }}/{{ machine_name }}"
+     force_init: yes
+     variables:
+       machine_name: "{{ machine_name }}"
+       vm_request_id: "{{ vm_request_id }}"
+       vm_owner: "{{ vm_owner }}"
+       vm_size: "{{ vm_size }}"
+       vsphere_server: "{{ vsphere_server }}"
+       vsphere_user: "{{ vsphere_user }}"
+       vsphere_password: "{{ vsphere_password }}"
+       admin_password: "{{ admin_password }}"
+       vsphere_datacenter: "{{ vsphere_datacenter}}"
+       vsphere_storage: "{{ vsphere_storage }}"
+       vsphere_cluster: "{{ vsphere_cluster }}"
+       resource_pool: "{{ resource_pool }}"
+       vm_portgroup: "{{ vm_portgroup }}"
+       vm_portgroup: "{{ vm_portgroup }}"
+       vm_folder: "{{ vm_folder }}"
+       vm_domain:  "{{ vm_domain }}"
+       organization: "{{ organization }}"
+       product_key: "{{ prod_key }}"
+
+     variables_file: "../vars/terraform_vars.tfvars"
+    when: stat_result.stat.exists == True
+    no_log: "{{ debug_off }}"
+
+  - pause:
+      minutes: 1 
+       
+  - name: Update VC02 inventory
+    include_tasks: twr.inv_src.update_vc02.yml
+
+  - name: Load host name from tower
+    shell: tower-cli host list | grep "{{ machine_name }}" | awk -e '{ print $2 } '
+    register: thost
+
+#  - name: Add host to base group
+#    shell: tower-cli host associate --host "{{ thost.stdout }}" --group "{{ base_os }}"
+#    when: thost is defined 
+  
+  - name: Check echo contents of thost
+    debug: 
+      msg: "{{ thost }}"
+
+
+  - name: Win.Run - Extend Disks
+    tower_job_launch:
+      inventory: "Systems Ansible Inventory"
+      job_template: "Win.Run - Extend Disks"
+      validate_certs: no
+      limit: "{{ thost.stdout }}"
+    ignore_errors: yes
+    register: job_extend_disks
+    when: 
+      - base_os.find("windows") != -1
+      - thost.stdout is defined
+
+
+  - name: Wait for extend disk job max 300s
+    tower_job_wait:
+      job_id: "{{ job_extend_disks.id }}"
+      timeout: 300
+    when: job_extend_disks.id is defined
+    
+
+  - name: Launch Win.Run - Join Lab Domain
+    tower_job_launch:
+      job_template: "Win.Run - Join Lab Domain"
+      validate_certs: no
+      limit: "{{ thost.stdout }}"
+    register: job_domain
+    when: 
+      - '"domain" in vm_apps'
+      - thost.stdout is defined
+    no_log: "{{ debug_off }}"
+
+  - name: Wait for domain job max 300s
+    tower_job_wait:
+      job_id: "{{ job_domain.id }}"
+      timeout: 300
+    when: job_domain.id is defined
+
+
+  - name: Win.Run - DSC - VXRail Domain Suffix
+    tower_job_launch:
+      inventory: "Systems Ansible Inventory"
+      job_template: "Win.Run - DSC - VXRail Domain Suffix"
+      validate_certs: no
+      limit: "{{ thost.stdout }}"
+    register: job_netcon
+    when: 
+      - thost.stdout is defined
+      - base_os is match("windows.*")
+    ignore_errors: true
+
+  - name: Wait for Network Job max 300s
+    tower_job_wait:
+      job_id: "{{ job_netcon.id }}"
+      timeout: 300
+    when: job_netcon.id is defined
+
+  - name: Win.Run - DSC Install SQL 2017
+    tower_job_launch:
+      inventory: "Systems Ansible Inventory"
+      job_template: "Win.Run - DSC Install SQL 2017"
+      validate_certs: no
+      limit: "{{ thost.stdout }}"
+    register: job_sql2017
+    when: 
+      - '"sql2017" in vm_apps'
+      - thost.stdout is defined
+
+  - name: Wait for SQL job max 300s
+    tower_job_wait:
+      job_id: "{{ job_sql2017.id }}"
+      timeout: 300
+    when: job_sql2017.id is defined
+
+  - name: Win.Run - DSC Install IIS
+    tower_job_launch:
+      inventory: "Systems Ansible Inventory"
+      job_template: "Win.Run - DSC Feature Web-Server"
+      validate_certs: no
+      limit: "{{ thost.stdout }}" 
+    register: job_iis
+    when: 
+      - '"iis" in vm_apps'
+      - thost.stdout is defined
+
+  - name: Wait for IIS job max 300s
+    tower_job_wait:
+      job_id: "{{ job_iis.id }}"
+      timeout: 300
+    when: job_iis.id is defined
+
+###
+#
+# Post Tasks
+#
+  post_tasks:
+  
+  - name: Update SNOW record
+    include_tasks: ./tsk.snow.update_request.yml
+    vars:
+      snow_number_task: "{{ vm_request_id }}"
+      snow_comment: "Provisioning of {{ machine_name }} has been completed by opef!"
+      snow_stage: "closed_complete"

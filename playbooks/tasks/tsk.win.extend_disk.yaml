@@ -1,0 +1,22 @@
+---
+
+- name: Extends all disks on windows to consume availabel size
+  hosts: all
+  gather_facts: no
+
+  tasks:
+
+  - name: Get disk facts
+    win_disk_facts:
+  
+  - name: Find disks and extend them 
+    win_partition:
+      drive_letter: "{{ item }}"
+      partition_size: -1
+    with_items: "{{ drive }}"
+    ignore_errors: True
+
+    vars: 
+      drive: "{{ ansible_facts | json_query('disks[*].partitions[*].drive_letter')  | list }}"
+  
+    

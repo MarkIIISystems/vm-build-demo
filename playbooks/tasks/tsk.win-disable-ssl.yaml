@@ -1,0 +1,9 @@
+---
+    
+- name: Disabale SSLv2 and SSLv3 in the registry
+  win_regedit:
+    path: "{{ item }}" 
+    name: Enabled
+    type: dword
+    data: 0
+  with_items: "{{ ssl_keys }}" 
